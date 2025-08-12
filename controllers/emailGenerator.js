@@ -1,0 +1,115 @@
+import Handlebars from "handlebars";
+
+const categoriesData = {
+  "categories": [
+    {
+      "id": "company_registration",
+      "name": "Company Registration & Compliance",
+      "documents": [
+        "Certificate of Incorporation",
+        "PAN Card / EIN",
+        "GST / VAT Registration Certificate",
+        "Shop & Establishment License",
+        "Partnership Deed / LLP Agreement / Articles of Association",
+        "Import Export Code"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nAs part of our compliance process for {{period}}, please provide the following registration-related documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nYou can securely upload them here: {{uploadLink}}\n\nPlease submit them before {{dueDate}}.\n\nRegards,\nYour Accounting Team"
+    },
+    {
+      "id": "financial_statements",
+      "name": "Financial Statements",
+      "documents": [
+        "Balance Sheet",
+        "Profit & Loss Statement",
+        "Trial Balance",
+        "General Ledger"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nWe are preparing your financial reports for {{period}}. Kindly share the following:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload securely here: {{uploadLink}}\n\nDeadline: {{dueDate}}.\n\nRegards,\nYour Accounting Team"
+    },
+    {
+      "id": "bank_cash_records",
+      "name": "Bank & Cash Records",
+      "documents": [
+        "Bank Statements (all accounts, monthly)",
+        "Cheque Book Scans",
+        "Cash Register / Petty Cash Vouchers"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nTo complete your reconciliation for {{period}}, we require the following:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure upload link: {{uploadLink}}\n\nKindly send before {{dueDate}}.\n\nBest regards,\nYour Accounting Team"
+    },
+    {
+      "id": "sales_revenue",
+      "name": "Sales & Revenue Documents",
+      "documents": [
+        "Sales Invoices",
+        "Credit Notes / Sales Returns",
+        "POS Reports"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nFor the purpose of revenue reporting for {{period}}, please share the following documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload here: {{uploadLink}}\n\nDeadline: {{dueDate}}.\n\nThanks,\nYour Accounting Team"
+    },
+    {
+      "id": "purchase_expense",
+      "name": "Purchase & Expense Documents",
+      "documents": [
+        "Purchase Invoices / Bills",
+        "Expense Receipts",
+        "Vendor Contracts / Agreements"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nTo complete your expense reconciliation for {{period}}, we require these:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure upload link: {{uploadLink}}\n\nPlease provide them before {{dueDate}}.\n\nRegards,\nYour Accounting Team"
+    },
+    {
+      "id": "payroll_hr",
+      "name": "Payroll & HR Records",
+      "documents": [
+        "Employee List & Details",
+        "Monthly Salary Sheets",
+        "PF & ESI Payment Proofs",
+        "TDS Payment Proofs"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nTo process payroll records for {{period}}, please share:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload link: {{uploadLink}}\n\nDue date: {{dueDate}}\n\nThanks,\nYour Accounting Team"
+    },
+    {
+      "id": "tax_documents",
+      "name": "Tax-Related Documents",
+      "documents": [
+        "GST Returns (GSTR-1, GSTR-3B, GSTR-9)",
+        "Income Tax Returns (last 3 years)",
+        "TDS Returns",
+        "Advance Tax Payment Challans"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nFor timely tax filing for {{period}}, please provide:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload securely: {{uploadLink}}\n\nDeadline: {{dueDate}}\n\nBest regards,\nYour Accounting Team"
+    },
+    {
+      "id": "supporting_documents",
+      "name": "Other Supporting Documents",
+      "documents": [
+        "Loan Agreements & EMI Schedules",
+        "Insurance Policies",
+        "Fixed Asset Purchase Bills",
+        "Depreciation Schedules"
+      ],
+      "emailTemplate": "Dear {{clientName}},\n\nTo complete our review for {{period}}, please send the following supporting documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure link: {{uploadLink}}\n\nDue date: {{dueDate}}\n\nKind regards,\nYour Accounting Team"
+    }
+  ]
+}
+
+
+export default function generateEmail({ categoryId, clientName, period, dueDate, uploadLink }) {
+  const category = categoriesData.categories.find(cat => cat.id === categoryId);
+
+  if (!category) {
+    throw new Error(`Category with id "${categoryId}" not found`);
+  }
+
+  const template = Handlebars.compile(category.emailTemplate);
+
+  const data = {
+    clientName,
+    period,
+    dueDate,
+    uploadLink,
+    documents: category.documents
+  };
+
+  return template(data);
+}
+
