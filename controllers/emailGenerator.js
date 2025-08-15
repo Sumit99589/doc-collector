@@ -110,6 +110,9 @@ export default function generateEmail({ categoryId, clientName, period, dueDate,
     documents: category.documents
   };
 
-  return template(data);
+  return {
+    subject: `Request for ${category.name} Documents`,
+    body: template(data)
+  };
 }
 
