@@ -1,42 +1,68 @@
 import generateEmail from "./emailGenerator.js";
 import express from "express";
 import sgMail from "@sendgrid/mail";
+import { createClient } from '@supabase/supabase-js'
 
 import dotenv from "dotenv";
 dotenv.config();
 
+const supabaseUrl = 'https://hregsxazlbzzscuqclha.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZWdzeGF6bGJ6enNjdXFjbGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyODUwOTMsImV4cCI6MjA3MDg2MTA5M30.tYSY92rIVKhk0t4DKx6QSFVLA1cjxK2_XXAAZGWat0Q'
+const supabase = createClient(supabaseUrl, supabaseKey)
+
 const router = express.Router();
-const clients = new Map();
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-export function addClient(req, res) {
-    const { clientName, email, contact } = req.body;
 
-    if (!clientName || !email || !contact) {
-        return res.status(400).json({ error: "clientName, email, and contact are required" });
+export async function addClient(req, res) {
+    const { clientName, email } = req.body;
+
+    if (!clientName || !email) {
+        return res.status(400).json({ error: "clientName and email are required" });
     }
 
-    if (clients.has(clientName)) {
-        return res.status(409).json({ error: "Client with this name already exists" });
+    const { data, error } = await supabase
+        .from('clients')
+        .insert([{ company: clientName.trim(), email: email.trim() }])
+        .select();
+
+    if (error) {
+        console.error("Supabase insert error:", error); // 👈 log the full error
+        if (error.code === "23505") {
+            return res.status(409).json({ error: "Client with this name already exists" });
+        }
+        return res.status(500).json({ error: error.message || "Failed to add client" });
     }
 
-    const client = { clientName, email, contact };
-    clients.set(clientName, client);
-
-    res.status(201).json({ message: "Client added successfully", client });
+    res.status(201).json({ message: "Client added successfully", data });
 }
+
+
+
+async function getEmailByCompanyName(companyName) {
+  const { data, error } = await supabase
+    .from("clients")
+    .select("email")
+    .eq("company", companyName)
+    .limit(1) // only need one
+    .single(); // returns an object instead of array
+
+  if (error) {
+    console.error("Error fetching email:", error);
+    return null;
+  }
+
+  return data.email; // returns the email string
+}
+
 
 export async function sendReq(req, res) {
     const { categoryId, clientName, period, dueDate } = req.body;
     const uploadLink = "hello.com";
 
-    if (!clients.has(clientName)) {
-        return res.status(404).json({ error: "Client not found." });
-    }
-
     const { subject, body } = generateEmail({ categoryId, clientName, period, dueDate, uploadLink });
-    const to = clients.get(clientName).email;
+    const to = await getEmailByCompanyName(clientName);
 
     const msg = {
         to,
