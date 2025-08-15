@@ -6,9 +6,10 @@ import { createClient } from '@supabase/supabase-js'
 import dotenv from "dotenv";
 dotenv.config();
 
-const supabaseUrl = 'https://hregsxazlbzzscuqclha.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyZWdzeGF6bGJ6enNjdXFjbGhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyODUwOTMsImV4cCI6MjA3MDg2MTA5M30.tYSY92rIVKhk0t4DKx6QSFVLA1cjxK2_XXAAZGWat0Q'
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 const router = express.Router();
 
