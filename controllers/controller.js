@@ -29,7 +29,7 @@ export async function addClient(req, res) {
         .select();
 
     if (error) {
-        console.error("Supabase insert error:", error); // 👈 log the full error
+        console.error("Supabase insert error:", error); 
         if (error.code === "23505") {
             return res.status(409).json({ error: "Client with this name already exists" });
         }
