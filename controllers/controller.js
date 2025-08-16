@@ -1,15 +1,10 @@
 import generateEmail from "./emailGenerator.js";
 import express from "express";
 import sgMail from "@sendgrid/mail";
-import { createClient } from '@supabase/supabase-js'
+import {supabase} from "./supabaseClient.js"
 
 import dotenv from "dotenv";
 dotenv.config();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
 
 const router = express.Router();
 
