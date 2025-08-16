@@ -1,4 +1,4 @@
-import { supabase } from "../controllers/supabaseClient";
+import { supabase } from "../controllers/supabaseClient.js";
 
 export async function getUrl(filePath){
     const {data, error} = await supabase

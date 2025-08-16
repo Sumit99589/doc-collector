@@ -1,6 +1,6 @@
 import express from "express";
 import {addClient, sendReq} from "./controllers/controller.js";
-import { uploadMiddleware, uploadFiles } from "./controllers/uploadController.js";
+
 const app = express();
 const PORT = 3000;
 
@@ -12,7 +12,6 @@ app.use(express.json());
 app.post("/add-client", addClient);
 app.post("/sendReq", sendReq);
 
-app.post("/upload/:clientName/:token", uploadMiddleware, uploadFiles)
 
 app.listen(PORT, () => {
     console.log(`Backend is live on port ${PORT}`);
