@@ -54,10 +54,10 @@ async function getEmailByCompanyName(companyName) {
 
 
 export async function sendReq(req, res) {
-    const { categoryId, clientName, period, dueDate } = req.body;
+    const { categoryId, clientName, period, dueDate, docs } = req.body;
     const uploadLink = "hello.com";
 
-    const { subject, body } = generateEmail({ categoryId, clientName, period, dueDate, uploadLink });
+    const { subject, body } = generateEmail({ categoryId, clientName, period, dueDate, uploadLink, docs});
     const to = await getEmailByCompanyName(clientName);
 
     const msg = {

@@ -93,8 +93,8 @@ const categoriesData = {
 }
 
 
-export default function generateEmail({ categoryId, clientName, period, dueDate, uploadLink }) {
-  const category = categoriesData.categories.find(cat => cat.id === categoryId);
+export default function generateEmail({ categoryId, clientName, period, dueDate, uploadLink, docs }) {
+  // const category = categoriesData.categories.find(cat => cat.id === categoryId);
 
   if (!category) {
     throw new Error(`Category with id "${categoryId}" not found`);
@@ -107,11 +107,11 @@ export default function generateEmail({ categoryId, clientName, period, dueDate,
     period,
     dueDate,
     uploadLink,
-    documents: category.documents
+    documents: docs
   };
 
   return {
-    subject: `Request for ${category.name} Documents`,
+    subject: `Request for ${categoryId} Documents`,
     body: template(data)
   };
 }
