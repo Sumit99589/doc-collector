@@ -94,7 +94,7 @@ const categoriesData = {
 
 
 export default function generateEmail({ categoryId, clientName, period, dueDate, uploadLink, docs }) {
-  // const category = categoriesData.categories.find(cat => cat.id === categoryId);
+  const category = categoriesData.categories.find(cat => cat.id === categoryId);
 
   if (!category) {
     throw new Error(`Category with id "${categoryId}" not found`);
