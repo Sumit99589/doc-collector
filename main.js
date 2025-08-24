@@ -13,7 +13,6 @@ app.use(cors());
 // Middleware should come before routes
 app.use(express.json());
 
-import generateUploadLinkRoutes from './routes/generateUploadLink.js';
 import validateTokenRoutes from './routes/validateToken.js';
 import uploadDocumentsRoutes from './routes/uploadDocuments.js';
 
@@ -31,7 +30,6 @@ app.use(cors({
   maxAge: 86400 // 24 hours
 }));
 
-app.use('/api', generateUploadLinkRoutes);
 app.use('/api', validateTokenRoutes);
 app.use('/api', uploadDocumentsRoutes);
 

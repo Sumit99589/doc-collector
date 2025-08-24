@@ -1,10 +1,6 @@
-// routes/generateUploadLink.js
-import express from "express";
+// uploadLinkGenerator.js
 import jwt from "jsonwebtoken";
 import { createClient } from "@supabase/supabase-js";
-import rateLimit from "express-rate-limit";
-
-const router = express.Router();
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -19,29 +15,6 @@ if (!process.env.JWT_UPLOAD_SECRET) {
 
 const JWT_SECRET = process.env.JWT_UPLOAD_SECRET;
 const UPLOAD_BASE_URL = process.env.APP_URL || "http://localhost:3001";
-
-// Rate limiting middleware
-const uploadLinkLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // Limit each IP to 20 requests per windowMs
-  message: {
-    success: false,
-    error: "Too many upload link requests, please try again later.",
-    retryAfter: "15 minutes",
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-// Security headers middleware
-const securityHeaders = (req, res, next) => {
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("X-XSS-Protection", "1; mode=block");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  next();
-};
 
 // Input validation
 const validateRequest = (body) => {
@@ -127,29 +100,32 @@ const logLinkGeneration = async (
   }
 };
 
-// GET endpoint - Health check
-router.get("/health", securityHeaders, (req, res) => {
-  res.json({
-    service: "Upload Link Generator",
-    status: "operational",
-    timestamp: new Date().toISOString(),
-    version: "1.0.0",
-  });
-});
-
-// POST endpoint - Generate upload link
-router.post("/generate-upload-link", uploadLinkLimiter, securityHeaders, async (req, res) => {
+/**
+ * Generate a secure upload link for document uploads
+ * @param {Object} options - The upload link options
+ * @param {string} options.clientName - Name of the client
+ * @param {string[]} options.sections - Array of document sections
+ * @param {string} [options.expiresIn="7d"] - Expiration time (e.g., "7d", "24h", "30m")
+ * @param {string} [options.generatedBy="System"] - Who generated the link
+ * @returns {Promise<Object>} Upload link data or error
+ */
+export const generateUploadLink = async ({
+  clientName,
+  sections,
+  expiresIn = "7d",
+  generatedBy = "System"
+}) => {
   try {
-    const { clientName, sections, expiresIn, generatedBy } = req.body;
+    const requestData = { clientName, sections, expiresIn, generatedBy };
 
     // Validate input
-    const validationErrors = validateRequest(req.body);
+    const validationErrors = validateRequest(requestData);
     if (validationErrors.length > 0) {
-      return res.status(400).json({
+      return {
         success: false,
         error: "Validation failed",
         details: validationErrors,
-      });
+      };
     }
 
     // Parse expiration
@@ -157,10 +133,10 @@ router.post("/generate-upload-link", uploadLinkLimiter, securityHeaders, async (
     try {
       expirationSeconds = parseExpiresIn(expiresIn);
     } catch (err) {
-      return res.status(400).json({
+      return {
         success: false,
         error: err.message,
-      });
+      };
     }
 
     // Create expiration timestamp
@@ -229,19 +205,36 @@ router.post("/generate-upload-link", uploadLinkLimiter, securityHeaders, async (
       },
     };
 
-    res.status(200).json(response);
+    return response;
   } catch (error) {
     console.error("Upload link generation error:", error);
 
     const isDevelopment = process.env.NODE_ENV === "development";
 
-    res.status(500).json({
+    return {
       success: false,
       error: "Internal server error",
       details: isDevelopment ? error.message : "Please try again later",
       timestamp: new Date().toISOString(),
-    });
+    };
   }
-});
+};
 
-export default router;
+// Example usage function
+export const exampleUsage = async () => {
+  const result = await generateUploadLink({
+    clientName: "John Doe",
+    sections: ["tax_returns", "receipts", "invoices"],
+    expiresIn: "7d",
+    generatedBy: "Admin User"
+  });
+
+  if (result.success) {
+    console.log("Upload URL:", result.data.uploadUrl);
+    console.log("Expires at:", result.data.expiresAt);
+    return result.data.uploadUrl;
+  } else {
+    console.error("Error:", result.error);
+    return null;
+  }
+};

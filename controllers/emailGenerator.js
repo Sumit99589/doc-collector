@@ -13,7 +13,7 @@ const categoriesData = {
         "Partnership Deed / LLP Agreement / Articles of Association",
         "Import Export Code"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nAs part of our compliance process for {{period}}, please provide the following registration-related documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nYou can securely upload them here: {{uploadLink}}\n\nPlease submit them before {{dueDate}}.\n\nRegards,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nAs part of our compliance process for {{period}}, please provide the following registration-related documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nYou can securely upload them here: {{uploadUrl}}\n\nPlease submit them before {{dueDate}}.\n\nRegards,\nYour Accounting Team"
     },
     {
       "id": "financial_statements",
@@ -24,7 +24,7 @@ const categoriesData = {
         "Trial Balance",
         "General Ledger"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nWe are preparing your financial reports for {{period}}. Kindly share the following:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload securely here: {{uploadLink}}\n\nDeadline: {{dueDate}}.\n\nRegards,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nWe are preparing your financial reports for {{period}}. Kindly share the following:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload securely here: {{uploadUrl}}\n\nDeadline: {{dueDate}}.\n\nRegards,\nYour Accounting Team"
     },
     {
       "id": "bank_cash_records",
@@ -34,7 +34,7 @@ const categoriesData = {
         "Cheque Book Scans",
         "Cash Register / Petty Cash Vouchers"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nTo complete your reconciliation for {{period}}, we require the following:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure upload link: {{uploadLink}}\n\nKindly send before {{dueDate}}.\n\nBest regards,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nTo complete your reconciliation for {{period}}, we require the following:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure upload link: {{uploadUrl}}\n\nKindly send before {{dueDate}}.\n\nBest regards,\nYour Accounting Team"
     },
     {
       "id": "sales_revenue",
@@ -44,7 +44,7 @@ const categoriesData = {
         "Credit Notes / Sales Returns",
         "POS Reports"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nFor the purpose of revenue reporting for {{period}}, please share the following documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload here: {{uploadLink}}\n\nDeadline: {{dueDate}}.\n\nThanks,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nFor the purpose of revenue reporting for {{period}}, please share the following documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload here: {{uploadUrl}}\n\nDeadline: {{dueDate}}.\n\nThanks,\nYour Accounting Team"
     },
     {
       "id": "purchase_expense",
@@ -54,7 +54,7 @@ const categoriesData = {
         "Expense Receipts",
         "Vendor Contracts / Agreements"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nTo complete your expense reconciliation for {{period}}, we require these:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure upload link: {{uploadLink}}\n\nPlease provide them before {{dueDate}}.\n\nRegards,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nTo complete your expense reconciliation for {{period}}, we require these:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure upload link: {{uploadUrl}}\n\nPlease provide them before {{dueDate}}.\n\nRegards,\nYour Accounting Team"
     },
     {
       "id": "payroll_hr",
@@ -65,7 +65,7 @@ const categoriesData = {
         "PF & ESI Payment Proofs",
         "TDS Payment Proofs"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nTo process payroll records for {{period}}, please share:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload link: {{uploadLink}}\n\nDue date: {{dueDate}}\n\nThanks,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nTo process payroll records for {{period}}, please share:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload link: {{uploadUrl}}\n\nDue date: {{dueDate}}\n\nThanks,\nYour Accounting Team"
     },
     {
       "id": "tax_documents",
@@ -76,7 +76,7 @@ const categoriesData = {
         "TDS Returns",
         "Advance Tax Payment Challans"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nFor timely tax filing for {{period}}, please provide:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload securely: {{uploadLink}}\n\nDeadline: {{dueDate}}\n\nBest regards,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nFor timely tax filing for {{period}}, please provide:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nUpload securely: {{uploadUrl}}\n\nDeadline: {{dueDate}}\n\nBest regards,\nYour Accounting Team"
     },
     {
       "id": "supporting_documents",
@@ -87,13 +87,13 @@ const categoriesData = {
         "Fixed Asset Purchase Bills",
         "Depreciation Schedules"
       ],
-      "emailTemplate": "Dear {{clientName}},\n\nTo complete our review for {{period}}, please send the following supporting documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure link: {{uploadLink}}\n\nDue date: {{dueDate}}\n\nKind regards,\nYour Accounting Team"
+      "emailTemplate": "Dear {{clientName}},\n\nTo complete our review for {{period}}, please send the following supporting documents:\n\n{{#each documents}}\n- {{this}}\n{{/each}}\n\nSecure link: {{uploadUrl}}\n\nDue date: {{dueDate}}\n\nKind regards,\nYour Accounting Team"
     }
   ]
 }
 
 
-export default function generateEmail({ categoryId, clientName, period, dueDate, uploadLink, docs }) {
+export default function generateEmail({ categoryId, clientName, period, dueDate, uploadUrl, docs }) {
   const category = categoriesData.categories.find(cat => cat.id === categoryId);
 
   if (!category) {
@@ -106,7 +106,7 @@ export default function generateEmail({ categoryId, clientName, period, dueDate,
     clientName,
     period,
     dueDate,
-    uploadLink,
+    uploadUrl,
     documents: docs
   };
 

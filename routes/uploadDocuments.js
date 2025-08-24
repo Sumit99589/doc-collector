@@ -6,7 +6,6 @@ import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import crypto from 'crypto';
-import { validateToken } from './validateToken.js';
 
 
 const router = express.Router();
@@ -115,76 +114,76 @@ const getClientIP = (req) => {
 
 
 // Validate upload token
-// const validateUploadToken = async (token) => {
-//   try {
-//     // Verify JWT signature and decode
-//     const decoded = jwt.verify(token, JWT_SECRET, {
-//       algorithms: ['HS256'],
-//       issuer: 'accountancy-platform',
-//       audience: 'document-upload',
-//     });
+const validateToken = async (token) => {
+  try {
+    // Verify JWT signature and decode
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      algorithms: ['HS256'],
+      issuer: 'accountancy-platform',
+      audience: 'document-upload',
+    });
 
-//     // Validate token purpose
-//     if (decoded.purpose !== 'document_upload') {
-//       return { valid: false, error: 'Invalid token purpose' };
-//     }
+    // Validate token purpose
+    if (decoded.purpose !== 'document_upload') {
+      return { valid: false, error: 'Invalid token purpose' };
+    }
 
-//     // Check expiration
-//     const now = Math.floor(Date.now() / 1000);
-//     if (decoded.exp <= now) {
-//       return { valid: false, error: 'Token has expired' };
-//     }
+    // Check expiration
+    const now = Math.floor(Date.now() / 1000);
+    if (decoded.exp <= now) {
+      return { valid: false, error: 'Token has expired' };
+    }
 
-//     // Check if token exists in audit table and is still active
-//     const { data: auditRecord, error: auditError } = await supabase
-//       .from('upload_link_audit')
-//       .select('*')
-//       .eq('token_id', decoded.jti)
-//       .single();
+    // Check if token exists in audit table and is still active
+    const { data: auditRecord, error: auditError } = await supabase
+      .from('upload_link_audit')
+      .select('*')
+      .eq('token_id', decoded.jti)
+      .single();
 
-//     if (auditError || !auditRecord) {
-//       return { valid: false, error: 'Token not found in system' };
-//     }
+    if (auditError || !auditRecord) {
+      return { valid: false, error: 'Token not found in system' };
+    }
 
-//     if (auditRecord.status !== 'active') {
-//       return { valid: false, error: `Token is ${auditRecord.status}` };
-//     }
+    if (auditRecord.status !== 'active') {
+      return { valid: false, error: `Token is ${auditRecord.status}` };
+    }
 
-//     // Check database expiration
-//     const expiresAt = new Date(auditRecord.expires_at);
-//     if (expiresAt <= new Date()) {
-//       // Update status to expired
-//       await supabase
-//         .from('upload_link_audit')
-//         .update({ status: 'expired', updated_at: new Date().toISOString() })
-//         .eq('id', auditRecord.id);
+    // Check database expiration
+    const expiresAt = new Date(auditRecord.expires_at);
+    if (expiresAt <= new Date()) {
+      // Update status to expired
+      await supabase
+        .from('upload_link_audit')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('id', auditRecord.id);
 
-//       return { valid: false, error: 'Token has expired' };
-//     }
+      return { valid: false, error: 'Token has expired' };
+    }
 
-//     return {
-//       valid: true,
-//       data: {
-//         clientName: decoded.clientName,
-//         sections: decoded.sections,
-//         folderPaths: decoded.folderPaths,
-//         tokenId: decoded.jti,
-//         auditRecord
-//       }
-//     };
-//   } catch (error) {
-//     console.error('Token validation error:', error);
+    return {
+      valid: true,
+      data: {
+        clientName: decoded.clientName,
+        sections: decoded.sections,
+        folderPaths: decoded.folderPaths,
+        tokenId: decoded.jti,
+        auditRecord
+      }
+    };
+  } catch (error) {
+    console.error('Token validation error:', error);
     
-//     if (error.name === 'TokenExpiredError') {
-//       return { valid: false, error: 'Token has expired' };
-//     }
-//     if (error.name === 'JsonWebTokenError') {
-//       return { valid: false, error: 'Invalid token signature' };
-//     }
+    if (error.name === 'TokenExpiredError') {
+      return { valid: false, error: 'Token has expired' };
+    }
+    if (error.name === 'JsonWebTokenError') {
+      return { valid: false, error: 'Invalid token signature' };
+    }
     
-//     return { valid: false, error: 'Token validation failed' };
-//   }
-// };
+    return { valid: false, error: 'Token validation failed' };
+  }
+};
 
 // Generate unique filename
 const generateUniqueFilename = (originalName, clientName, section) => {
@@ -299,7 +298,7 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
       }
 
       // Validate token
-      const tokenValidation = await validateToken(token, clientIP, userAgent);
+      const tokenValidation = await validateToken(token);
       if (!tokenValidation.valid) {
         return res.status(401).json({
           success: false,

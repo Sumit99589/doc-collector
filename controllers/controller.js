@@ -2,6 +2,7 @@ import generateEmail from "./emailGenerator.js";
 import express from "express";
 import sgMail from "@sendgrid/mail";
 import {supabase} from "./supabaseClient.js"
+import { generateUploadLink } from '../routes/generateUploadLink.js';
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -53,27 +54,107 @@ async function getEmailByCompanyName(companyName) {
 }
 
 
+/**
+ * Convert a due date to expiration format
+ * @param {string|Date} dueDate - The due date
+ * @returns {string} Expiration format (e.g., "7d")
+ */
+function convertDueDateToExpiresIn(dueDate) {
+    const today = new Date();
+    const target = new Date(dueDate);
+    
+    // Reset time to midnight for accurate day calculation
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+    
+    // Calculate difference in milliseconds
+    const diffTime = target.getTime() - today.getTime();
+    
+    // Convert to days (minimum 1 day)
+    const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+    
+    return `${diffDays}d`;
+}
+
 export async function sendReq(req, res) {
-    const { categoryId, clientName, period, dueDate, docs } = req.body;
-    const uploadLink = "hello.com";
-
-    const { subject, body } = generateEmail({ categoryId, clientName, period, dueDate, uploadLink, docs});
-    const to = await getEmailByCompanyName(clientName);
-
-    const msg = {
-        to,
-        from: process.env.FROM_EMAIL,
-        subject,
-        text: body
-    };
-
     try {
+        const { categoryId, clientName, period, dueDate, docs } = req.body;
+
+        // Convert dueDate to expiresIn format
+        const expiresIn = convertDueDateToExpiresIn(dueDate);
+        console.log(`Due date: ${dueDate}, Expires in: ${expiresIn}`);
+
+        // Generate upload link
+        const result = await generateUploadLink({
+            clientName: clientName,
+            sections: docs,
+            expiresIn: expiresIn, // Use converted format
+            generatedBy: "Admin User"
+        });
+
+        let uploadUrl = null;
+
+        if (result.success) {
+            console.log("Upload URL:", result.data.uploadUrl);
+            uploadUrl = result.data.uploadUrl;
+        } else {
+            console.error("Upload link generation error:", result.error);
+            return res.status(500).json({ 
+                error: "Failed to generate upload link", 
+                details: result.error 
+            });
+        }
+
+        // Generate email content with the upload URL
+        const { subject, body } = generateEmail({ 
+            categoryId, 
+            clientName, 
+            period, 
+            dueDate, 
+            uploadUrl, 
+            docs 
+        });
+        
+        // Get recipient email
+        const to = await getEmailByCompanyName(clientName);
+        
+        if (!to) {
+            return res.status(404).json({ 
+                error: "Client email not found" 
+            });
+        }
+
+        // Prepare email message
+        const msg = {
+            to,
+            from: process.env.FROM_EMAIL,
+            subject,
+            text: body
+        };
+
+        // Send email
         await sgMail.send(msg);
-        console.log(` Email sent to ${to}`);
-        res.json({ status: "ok" });
+        console.log(`Email sent to ${to}`);
+        
+        // Return success response with additional data
+        res.json({ 
+            status: "ok",
+            data: {
+                emailSent: true,
+                recipient: to,
+                uploadUrl: uploadUrl,
+                expiresAt: result.data?.expiresAt,
+                dueDate: dueDate,
+                expiresIn: expiresIn
+            }
+        });
+
     } catch (error) {
-        console.error(" Email failed:", error.response?.body || error);
-        res.status(500).json({ error: "Failed to send email" });
+        console.error("Email sending failed:", error.response?.body || error);
+        res.status(500).json({ 
+            error: "Failed to send email",
+            details: error.message 
+        });
     }
 }
 
