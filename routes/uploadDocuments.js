@@ -5,7 +5,8 @@ import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
-import crypto from 'crypto';
+// crypto is no longer needed for filenames
+// import crypto from 'crypto'; 
 
 
 const router = express.Router();
@@ -185,19 +186,7 @@ const validateToken = async (token) => {
   }
 };
 
-// Generate unique filename
-const generateUniqueFilename = (originalName, clientName, section) => {
-  const ext = path.extname(originalName);
-  const baseName = path.basename(originalName, ext)
-    .replace(/[^a-zA-Z0-9\s-_]/g, '')
-    .replace(/\s+/g, '_')
-    .toLowerCase();
-  
-  const timestamp = Date.now();
-  const randomString = crypto.randomBytes(4).toString('hex');
-  
-  return `${baseName}_${timestamp}_${randomString}${ext}`;
-};
+// --- REMOVED generateUniqueFilename function ---
 
 // Upload file to Supabase Storage
 const uploadFileToStorage = async (file, filePath) => {
@@ -212,6 +201,10 @@ const uploadFileToStorage = async (file, filePath) => {
 
     if (error) {
       console.error('Supabase storage error:', error);
+      // Provide a more user-friendly error for file collisions
+      if (error.message.includes('Duplicate')) {
+        throw new Error(`A file with the same name already exists at this location.`);
+      }
       throw new Error(`Storage upload failed: ${error.message}`);
     }
 
@@ -341,12 +334,13 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
 
       for (const file of files) {
         try {
-          // Generate unique filename
-          const uniqueFilename = generateUniqueFilename(file.originalname, tokenData.clientName, section);
-          const fullPath = `${folderPath}/${uniqueFilename}`;
+          // --- CHANGE HERE ---
+          // Use the original filename directly instead of generating a unique one
+          const filenameToStore = file.originalname;
+          const fullPath = `${folderPath}/${filenameToStore}`;
 
           // Upload to Supabase Storage
-          const uploadResult = await uploadFileToStorage(file, fullPath);
+          await uploadFileToStorage(file, fullPath);
 
           // Log successful upload
           await logFileUpload(
@@ -362,7 +356,9 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
 
           uploadResults.push({
             originalName: file.originalname,
-            storedName: uniqueFilename,
+            // --- CHANGE HERE ---
+            // The stored name is now the same as the original name
+            storedName: filenameToStore,
             storagePath: fullPath,
             size: file.size,
             contentType: file.mimetype,
