@@ -15,6 +15,7 @@ app.use(express.json());
 
 import validateTokenRoutes from './routes/validateToken.js';
 import uploadDocumentsRoutes from './routes/uploadDocuments.js';
+import registerUser from './routes/register-user.js'
 
 // app.use(helmet({
 //   crossOriginEmbedderPolicy: false, // Needed for file uploads
@@ -32,12 +33,13 @@ app.use(cors({
 
 app.use('/api', validateTokenRoutes);
 app.use('/api', uploadDocumentsRoutes);
+app.use('/',registerUser);
 
 // Define routes properly
 app.post("/add-client", addClient);
 app.post("/sendReq", sendReq);
 
-app.get("/getClients", getClients);
+app.get("/getClients/:userId", getClients);
 
 
 app.listen(PORT, () => {

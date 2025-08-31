@@ -13,7 +13,7 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 
 export async function addClient(req, res) {
-    const { clientName, email } = req.body;
+    const { clientName, email, userId } = req.body;
 
     if (!clientName || !email) {
         return res.status(400).json({ error: "clientName and email are required" });
@@ -21,7 +21,7 @@ export async function addClient(req, res) {
 
     const { data, error } = await supabase
         .from('clients')
-        .insert([{ company: clientName.trim(), email: email.trim() }])
+        .insert([{ client_name: clientName.trim(), client_email: email.trim(),clerk_id:userId }])
         .select();
 
     if (error) {
@@ -40,17 +40,19 @@ export async function addClient(req, res) {
 async function getEmailByCompanyName(companyName) {
   const { data, error } = await supabase
     .from("clients")
-    .select("email")
-    .eq("company", companyName)
+    .select("client_email")
+    .eq("client_name", companyName)
     .limit(1) // only need one
     .single(); // returns an object instead of array
+
+    console.log(data.client_email)
 
   if (error) {
     console.error("Error fetching email:", error);
     return null;
   }
 
-  return data.email; // returns the email string
+  return data.client_email; // returns the email string
 }
 
 
@@ -78,7 +80,7 @@ function convertDueDateToExpiresIn(dueDate) {
 
 export async function sendReq(req, res) {
     try {
-        const { categoryId, clientName, period, dueDate, docs } = req.body;
+        const { categoryId, clientName, period, dueDate, docs, userId } = req.body;
 
         // Convert dueDate to expiresIn format
         const expiresIn = convertDueDateToExpiresIn(dueDate);
@@ -89,7 +91,8 @@ export async function sendReq(req, res) {
             clientName: clientName,
             sections: docs,
             expiresIn: expiresIn, // Use converted format
-            generatedBy: "Admin User"
+            generatedBy: "Admin",
+            userId:userId
         });
 
         let uploadUrl = null;

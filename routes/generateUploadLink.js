@@ -16,6 +16,18 @@ if (!process.env.JWT_UPLOAD_SECRET) {
 const JWT_SECRET = process.env.JWT_UPLOAD_SECRET;
 const UPLOAD_BASE_URL = process.env.APP_URL || "http://localhost:3001";
 
+// Validate Clerk User ID format
+const validateUserId = (userId) => {
+  if (!userId || typeof userId !== 'string') {
+    return false;
+  }
+  
+  // Basic validation - Clerk user IDs typically start with 'user_' and have alphanumeric characters
+  // Adjust this regex based on your specific Clerk user ID format
+  const userIdRegex = /^user_[\w-]+$/;
+  return userIdRegex.test(userId);
+};
+
 // Input validation
 const validateRequest = (body) => {
   const errors = [];
@@ -26,6 +38,18 @@ const validateRequest = (body) => {
     body.clientName.trim().length === 0
   ) {
     errors.push("clientName is required and must be a non-empty string");
+  }
+
+  if (
+    !body.userId ||
+    typeof body.userId !== "string" ||
+    body.userId.trim().length === 0
+  ) {
+    errors.push("userId is required and must be a non-empty string");
+  }
+
+  if (body.userId && !validateUserId(body.userId)) {
+    errors.push("userId must be a valid Clerk user ID format");
   }
 
   if (!body.sections || !Array.isArray(body.sections) || body.sections.length === 0) {
@@ -79,7 +103,8 @@ const logLinkGeneration = async (
   sections,
   generatedBy,
   expiresAt,
-  tokenId
+  tokenId,
+  userId
 ) => {
   try {
     const { error } = await supabase.from("upload_link_audit").insert({
@@ -88,6 +113,7 @@ const logLinkGeneration = async (
       generated_by: generatedBy,
       expires_at: expiresAt,
       token_id: tokenId,
+      user_id: userId, // Add user_id to audit log
       generated_at: new Date().toISOString(),
       status: "active",
     });
@@ -103,6 +129,7 @@ const logLinkGeneration = async (
 /**
  * Generate a secure upload link for document uploads
  * @param {Object} options - The upload link options
+ * @param {string} options.userId - Clerk user ID
  * @param {string} options.clientName - Name of the client
  * @param {string[]} options.sections - Array of document sections
  * @param {string} [options.expiresIn="7d"] - Expiration time (e.g., "7d", "24h", "30m")
@@ -110,23 +137,25 @@ const logLinkGeneration = async (
  * @returns {Promise<Object>} Upload link data or error
  */
 export const generateUploadLink = async ({
+  userId,
   clientName,
   sections,
   expiresIn = "7d",
-  generatedBy = "System"
+  generatedBy = "System",
 }) => {
   try {
-    const requestData = { clientName, sections, expiresIn, generatedBy };
+    const requestData = { userId, clientName, sections, expiresIn, generatedBy };
 
     // Validate input
     const validationErrors = validateRequest(requestData);
     if (validationErrors.length > 0) {
-      return {
-        success: false,
-        error: "Validation failed",
-        details: validationErrors,
-      };
-    }
+  console.error("❌ Validation errors:", validationErrors, "Request data:", requestData);
+  return {
+    success: false,
+    error: "Validation failed",
+    details: validationErrors,
+  };
+}
 
     // Parse expiration
     let expirationSeconds;
@@ -146,7 +175,7 @@ export const generateUploadLink = async ({
     const sanitizedSections = sections.map((section) => section.trim().toLowerCase());
     const uniqueSections = [...new Set(sanitizedSections)];
 
-    // Generate folder paths
+    // Generate folder paths (without userId prefix for backward compatibility)
     const folderPaths = uniqueSections.map((section) =>
       generateSecurePath(clientName, section)
     );
@@ -154,8 +183,9 @@ export const generateUploadLink = async ({
     // Create unique token ID
     const tokenId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create JWT payload
+    // Create JWT payload - include userId for validation
     const tokenPayload = {
+      userId: userId.trim(),
       clientName: clientName.trim(),
       sections: uniqueSections,
       folderPaths,
@@ -177,13 +207,14 @@ export const generateUploadLink = async ({
     const uploadUrl = `${UPLOAD_BASE_URL}/upload/${token}`;
 
     // Log the link generation for audit purposes
-    await logLinkGeneration(clientName, uniqueSections, generatedBy, expiresAt, tokenId);
+    await logLinkGeneration(clientName, uniqueSections, generatedBy, expiresAt, tokenId, userId);
 
     // Prepare response
     const response = {
       success: true,
       data: {
         uploadUrl,
+        userId: userId.trim(),
         clientName: clientName.trim(),
         sections: uniqueSections,
         expiresAt: expiresAt.toISOString(),
@@ -194,13 +225,14 @@ export const generateUploadLink = async ({
       metadata: {
         folderStructure: folderPaths.map((path, index) => ({
           section: uniqueSections[index],
-          storagePath: `client-documents/${path}`,
+          storagePath: `client-documents/${userId}/${path}`, // Updated to show the actual path with userId
         })),
         securityInfo: {
           encrypted: true,
           algorithm: "HS256",
           expirationPolicy: "automatic",
           auditLogged: true,
+          userValidated: true,
         },
       },
     };
@@ -223,6 +255,7 @@ export const generateUploadLink = async ({
 // Example usage function
 export const exampleUsage = async () => {
   const result = await generateUploadLink({
+    userId: "user_2NNEqL2nrIRdJ8q8fkHFPKOSBF5",
     clientName: "John Doe",
     sections: ["tax_returns", "receipts", "invoices"],
     expiresIn: "7d",
@@ -231,6 +264,7 @@ export const exampleUsage = async () => {
 
   if (result.success) {
     console.log("Upload URL:", result.data.uploadUrl);
+    console.log("User ID:", result.data.userId);
     console.log("Expires at:", result.data.expiresAt);
     return result.data.uploadUrl;
   } else {

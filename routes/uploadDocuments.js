@@ -113,6 +113,17 @@ const getClientIP = (req) => {
   );
 };
 
+// Validate Clerk User ID format
+const validateUserId = (userId) => {
+  if (!userId || typeof userId !== 'string') {
+    return false;
+  }
+  
+  // Basic validation - Clerk user IDs typically start with 'user_' and have alphanumeric characters
+  // Adjust this regex based on your specific Clerk user ID format
+  const userIdRegex = /^user_[a-zA-Z0-9]+$/;
+  return userIdRegex.test(userId);
+};
 
 // Validate upload token
 const validateToken = async (token) => {
@@ -133,6 +144,11 @@ const validateToken = async (token) => {
     const now = Math.floor(Date.now() / 1000);
     if (decoded.exp <= now) {
       return { valid: false, error: 'Token has expired' };
+    }
+
+    // Validate userId exists in token (required for multi-user support)
+    if (!decoded.userId) {
+      return { valid: false, error: 'Token missing user information' };
     }
 
     // Check if token exists in audit table and is still active
@@ -165,6 +181,7 @@ const validateToken = async (token) => {
     return {
       valid: true,
       data: {
+        userId: decoded.userId,
         clientName: decoded.clientName,
         sections: decoded.sections,
         folderPaths: decoded.folderPaths,
@@ -185,8 +202,6 @@ const validateToken = async (token) => {
     return { valid: false, error: 'Token validation failed' };
   }
 };
-
-// --- REMOVED generateUniqueFilename function ---
 
 // Upload file to Supabase Storage
 const uploadFileToStorage = async (file, filePath) => {
@@ -216,7 +231,7 @@ const uploadFileToStorage = async (file, filePath) => {
 };
 
 // Log file upload for audit trail
-const logFileUpload = async (tokenId, clientName, section, fileName, filePath, fileSize, uploadedBy, status = 'success') => {
+const logFileUpload = async (tokenId, clientName, section, fileName, filePath, fileSize, uploadedBy, userId, status = 'success') => {
   try {
     const { error } = await supabase
       .from('file_upload_audit')
@@ -228,6 +243,7 @@ const logFileUpload = async (tokenId, clientName, section, fileName, filePath, f
         storage_path: filePath,
         file_size: fileSize,
         uploaded_by: uploadedBy,
+        user_id: userId, // Add user_id to audit log
         uploaded_at: new Date().toISOString(),
         status: status
       });
@@ -263,7 +279,7 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
     }
 
     try {
-      const { token, section, clientName } = req.body;
+      const { token, section, clientName, userId } = req.body;
       const files = req.files;
       const clientIP = getClientIP(req);
       const userAgent = req.headers['user-agent'] || 'unknown';
@@ -290,7 +306,7 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
         });
       }
 
-      // Validate token
+      // Validate token first to get userId from it
       const tokenValidation = await validateToken(token);
       if (!tokenValidation.valid) {
         return res.status(401).json({
@@ -300,6 +316,25 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
       }
 
       const tokenData = tokenValidation.data;
+
+      // Extract userId from token (this is the source of truth)
+      const tokenUserId = tokenData.userId;
+
+      // If userId is provided in request body, validate it matches the token
+      if (userId && userId !== tokenUserId) {
+        return res.status(403).json({
+          success: false,
+          error: 'User ID mismatch with token'
+        });
+      }
+
+      // Validate user ID format
+      if (!validateUserId(tokenUserId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid user ID format in token'
+        });
+      }
 
       // Validate section is allowed for this token
       if (!tokenData.sections.includes(section)) {
@@ -319,14 +354,19 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
 
       // Get the folder path for this section
       const sectionIndex = tokenData.sections.indexOf(section);
-      const folderPath = tokenData.folderPaths[sectionIndex];
+      const originalFolderPath = tokenData.folderPaths[sectionIndex];
 
-      if (!folderPath) {
+      if (!originalFolderPath) {
         return res.status(500).json({
           success: false,
           error: 'Invalid folder path configuration'
         });
       }
+
+      // Construct new folder path with user ID
+      // Original path: company_name/section
+      // New path: user_id/company_name/section
+      const newFolderPath = `${tokenUserId}/${originalFolderPath}`;
 
       // Process each file
       const uploadResults = [];
@@ -334,10 +374,9 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
 
       for (const file of files) {
         try {
-          // --- CHANGE HERE ---
-          // Use the original filename directly instead of generating a unique one
+          // Use the original filename directly
           const filenameToStore = file.originalname;
-          const fullPath = `${folderPath}/${filenameToStore}`;
+          const fullPath = `${newFolderPath}/${filenameToStore}`;
 
           // Upload to Supabase Storage
           await uploadFileToStorage(file, fullPath);
@@ -351,13 +390,12 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
             fullPath,
             file.size,
             clientIP,
+            tokenUserId, // Use userId from token
             'success'
           );
 
           uploadResults.push({
             originalName: file.originalname,
-            // --- CHANGE HERE ---
-            // The stored name is now the same as the original name
             storedName: filenameToStore,
             storagePath: fullPath,
             size: file.size,
@@ -377,6 +415,7 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
             '',
             file.size,
             clientIP,
+            tokenUserId, // Use userId from token
             'failed'
           );
 
@@ -417,6 +456,7 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
           totalFiles: files.length,
           section: section,
           clientName: tokenData.clientName,
+          userId: tokenUserId, // Use userId from token
           uploadedAt: new Date().toISOString(),
           files: uploadResults
         }

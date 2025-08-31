@@ -2,10 +2,14 @@ import {supabase} from "../controllers/supabaseClient.js"
 
 
 export async function getClients(req, res){
+    const {userId} = req.params
     const {data, error} = await supabase
     .from("clients")
-    .select("*");
+    .select("*")
+    .eq("clerk_id", userId);
 
+    console.log(userId)
+    console.log("the returend data is ")
     console.log(data)
 
     if (error) {
