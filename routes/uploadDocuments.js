@@ -469,6 +469,18 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
         };
       }
 
+      try{
+        await supabase
+      .from("clients")
+      .update({
+            status: "active",
+          })
+      .eq("client_name", clientName)
+      }catch(error){
+        console.log("error in changing the status :", error);
+      }
+
+
       res.status(200).json(response);
 
     } catch (error) {

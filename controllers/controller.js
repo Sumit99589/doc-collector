@@ -13,7 +13,9 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 
 export async function addClient(req, res) {
-    const { clientName, email, userId } = req.body;
+    const clientName = req.body.client_name;
+    const email = req.body.client_email
+    const  userId = req.body.userId
 
     if (!clientName || !email) {
         return res.status(400).json({ error: "clientName and email are required" });
@@ -127,10 +129,22 @@ export async function sendReq(req, res) {
             });
         }
 
+        const {data, error} = await supabase
+        .from("users")
+        .select("name")
+        .eq("clerk_id", userId)
+        .single()
+
+        // console.log(data.email)
+
         // Prepare email message
         const msg = {
             to,
-            from: process.env.FROM_EMAIL,
+            from: {
+                email: process.env.FROM_EMAIL, // must be a verified sender
+                // in name put the name of the user
+                name: data.name
+            },
             subject,
             text: body
         };
@@ -138,6 +152,17 @@ export async function sendReq(req, res) {
         // Send email
         await sgMail.send(msg);
         console.log(`Email sent to ${to}`);
+
+        try{
+          await supabase
+            .from("clients")
+            .update({
+                  status: "pending",
+                })
+            .eq("client_name", clientName)
+            }catch(error){
+              console.log("error in changing the status :", error);
+            }
         
         // Return success response with additional data
         res.json({ 
