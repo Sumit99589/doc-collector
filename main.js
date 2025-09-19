@@ -15,7 +15,9 @@ app.use(express.json());
 
 import validateTokenRoutes from './routes/validateToken.js';
 import uploadDocumentsRoutes from './routes/uploadDocuments.js';
-import registerUser from './routes/register-user.js'
+import registerUser from './routes/register-user.js';
+import { getFileSendClients, addFileSendClient, updateFileSendClient, deleteFileSendClient } from './routes/fileSendClients.js';
+import { sendFiles, uploadMiddleware } from './routes/sendFiles.js';
 
 // app.use(helmet({
 //   crossOriginEmbedderPolicy: false, // Needed for file uploads
@@ -40,6 +42,15 @@ app.post("/add-client", addClient);
 app.post("/sendReq", sendReq);
 
 app.get("/getClients/:userId", getClients);
+
+// File send clients routes
+app.get("/getFileSendClients/:userId", getFileSendClients);
+app.post("/addFileSendClient", addFileSendClient);
+app.post("/updateFileSendClient", updateFileSendClient);
+app.post("/deleteFileSendClient", deleteFileSendClient);
+
+// Send files route with file upload middleware
+app.post("/sendFiles", uploadMiddleware, sendFiles);
 
 
 app.listen(PORT, () => {
