@@ -1,5 +1,6 @@
 import multer from 'multer';
 import { sendFilesViaEmail } from '../controllers/fileEmailService.js';
+import { logActivity, ACTIVITY_TYPES, ACTIVITY_CATEGORIES } from '../utils/activityLogger.js';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -16,7 +17,7 @@ const upload = multer({
 // Send files to client
 export async function sendFiles(req, res) {
     try {
-        const { clientId, clientEmail, clientName } = req.body;
+        const { clientId, clientEmail, clientName, userId } = req.body;
         const files = req.files;
 
         if (!clientId || !clientEmail || !clientName) {
@@ -45,6 +46,23 @@ export async function sendFiles(req, res) {
         });
 
         if (result.success) {
+            // Log activity
+            await logActivity({
+                userId,
+                type: ACTIVITY_TYPES.FILE_SENT,
+                category: ACTIVITY_CATEGORIES.EMAIL,
+                title: `Files sent to "${clientName}"`,
+                description: `Sent ${files.length} file(s) via email to ${clientEmail}`,
+                clientName,
+                clientEmail,
+                metadata: {
+                    fileCount: files.length,
+                    fileNames: files.map(f => f.originalname),
+                    totalSize: totalSize,
+                    messageId: result.messageId
+                }
+            });
+
             return res.json({ 
                 success: true, 
                 message: "Files sent successfully",

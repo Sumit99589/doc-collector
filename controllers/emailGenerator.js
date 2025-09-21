@@ -93,14 +93,43 @@ const categoriesData = {
 }
 
 
-export default function generateEmail({ categoryId, clientName, period, dueDate, uploadUrl, docs }) {
-  const category = categoriesData.categories.find(cat => cat.id === categoryId);
+export default function generateEmail({ categoryId, categoryName, clientName, period, dueDate, uploadUrl, docs, isAccountancyFirm }) {
+  let emailTemplate;
+  let subject;
 
-  if (!category) {
-    throw new Error(`Category with id "${categoryId}" not found`);
+  if (isAccountancyFirm) {
+    // For accountancy firms, use predefined templates
+    const category = categoriesData.categories.find(cat => cat.id === categoryId);
+
+    if (!category) {
+      throw new Error(`Category with id "${categoryId}" not found`);
+    }
+
+    emailTemplate = category.emailTemplate;
+    subject = `Request for ${category.name} Documents`;
+  } else {
+    // For generic clients, use a generic template
+    emailTemplate = `Dear {{clientName}},
+
+We need the following documents for {{period}}:
+
+{{#each documents}}
+- {{this}}
+{{/each}}
+
+Please upload them securely here: {{uploadUrl}}
+
+Deadline: {{dueDate}}
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+Your Document Management Team`;
+
+    subject = `Document Request: ${categoryName || 'Custom Documents'}`;
   }
 
-  const template = Handlebars.compile(category.emailTemplate);
+  const template = Handlebars.compile(emailTemplate);
 
   const data = {
     clientName,
@@ -111,7 +140,7 @@ export default function generateEmail({ categoryId, clientName, period, dueDate,
   };
 
   return {
-    subject: `Request for ${categoryId} Documents`,
+    subject,
     body: template(data)
   };
 }

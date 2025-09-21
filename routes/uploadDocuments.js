@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import { logActivity, ACTIVITY_TYPES, ACTIVITY_CATEGORIES } from '../utils/activityLogger.js';
 // crypto is no longer needed for filenames
 // import crypto from 'crypto'; 
 
@@ -393,6 +394,23 @@ router.post('/upload-documents', uploadLimiter, securityHeaders, async (req, res
             tokenUserId, // Use userId from token
             'success'
           );
+
+          // Log activity
+          await logActivity({
+            userId: tokenUserId,
+            type: ACTIVITY_TYPES.FILE_UPLOADED,
+            category: ACTIVITY_CATEGORIES.FILE,
+            title: `File uploaded for "${tokenData.clientName}"`,
+            description: `Uploaded file "${file.originalname}" in section "${section}"`,
+            clientName: tokenData.clientName,
+            metadata: {
+              fileName: file.originalname,
+              section,
+              fileSize: file.size,
+              contentType: file.mimetype,
+              storagePath: fullPath
+            }
+          });
 
           uploadResults.push({
             originalName: file.originalname,

@@ -1,5 +1,11 @@
 {
   "type": "module",
+  "scripts": {
+    "start": "node main.js",
+    "setup-security": "node runSecuritySetup.js",
+    "check-security": "node checkSecurityStatus.js",
+    "setup-database": "node setupDatabase.js"
+  },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.13.23",
     "@sendgrid/mail": "^8.1.5",

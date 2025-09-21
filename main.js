@@ -18,6 +18,9 @@ import uploadDocumentsRoutes from './routes/uploadDocuments.js';
 import registerUser from './routes/register-user.js';
 import { getFileSendClients, addFileSendClient, updateFileSendClient, deleteFileSendClient } from './routes/fileSendClients.js';
 import { sendFiles, uploadMiddleware } from './routes/sendFiles.js';
+import { deleteClient } from './routes/deleteClient.js';
+import { updateClient } from './routes/updateClient.js';
+import { getActivities } from './routes/getActivities.js';
 
 // app.use(helmet({
 //   crossOriginEmbedderPolicy: false, // Needed for file uploads
@@ -49,8 +52,15 @@ app.post("/addFileSendClient", addFileSendClient);
 app.post("/updateFileSendClient", updateFileSendClient);
 app.post("/deleteFileSendClient", deleteFileSendClient);
 
+// Main clients routes
+app.post("/updateClient", updateClient);
+app.post("/deleteClient", deleteClient);
+
 // Send files route with file upload middleware
 app.post("/sendFiles", uploadMiddleware, sendFiles);
+
+// Activities route
+app.get("/getActivities/:userId", getActivities);
 
 
 app.listen(PORT, () => {

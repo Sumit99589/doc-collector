@@ -3,6 +3,7 @@ import express from "express";
 import sgMail from "@sendgrid/mail";
 import {supabase} from "./supabaseClient.js"
 import { generateUploadLink } from '../routes/generateUploadLink.js';
+import { logActivity, ACTIVITY_TYPES, ACTIVITY_CATEGORIES } from '../utils/activityLogger.js';
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -13,9 +14,14 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 
 export async function addClient(req, res) {
-    const clientName = req.body.client_name;
-    const email = req.body.client_email
-    const  userId = req.body.userId
+    const clientName = req.body.clientName || req.body.client_name;
+    const email = req.body.email || req.body.client_email;
+    const contactPerson = req.body.contactPerson;
+    const phone = req.body.phone;
+    const address = req.body.address;
+    const status = req.body.status || 'pending';
+    const isAccountancyFirm = req.body.isAccountancyFirm || false;
+    const userId = req.body.userId;
 
     if (!clientName || !email) {
         return res.status(400).json({ error: "clientName and email are required" });
@@ -23,7 +29,16 @@ export async function addClient(req, res) {
 
     const { data, error } = await supabase
         .from('clients')
-        .insert([{ client_name: clientName.trim(), client_email: email.trim(),clerk_id:userId }])
+        .insert([{ 
+            client_name: clientName.trim(), 
+            client_email: email.trim(),
+            contact_person: contactPerson,
+            phone: phone,
+            address: address,
+            status: status,
+            is_accountancy_firm: isAccountancyFirm,
+            clerk_id: userId 
+        }])
         .select();
 
     if (error) {
@@ -34,7 +49,25 @@ export async function addClient(req, res) {
         return res.status(500).json({ error: error.message || "Failed to add client" });
     }
 
-    res.status(201).json({ message: "Client added successfully", data });
+    // Log activity
+    await logActivity({
+        userId,
+        type: ACTIVITY_TYPES.CLIENT_ADDED,
+        category: ACTIVITY_CATEGORIES.CLIENT,
+        title: `New client "${clientName}" added`,
+        description: `Added new client with email ${email}`,
+        clientName,
+        clientEmail: email,
+        metadata: {
+            contactPerson,
+            phone,
+            address,
+            isAccountancyFirm,
+            status
+        }
+    });
+
+    res.status(201).json({ message: "Client added successfully", client: data[0] });
 }
 
 
@@ -82,7 +115,7 @@ function convertDueDateToExpiresIn(dueDate) {
 
 export async function sendReq(req, res) {
     try {
-        const { categoryId, clientName, period, dueDate, docs, userId } = req.body;
+        const { categoryId, categoryName, clientName, period, dueDate, docs, isAccountancyFirm, userId } = req.body;
 
         // Convert dueDate to expiresIn format
         const expiresIn = convertDueDateToExpiresIn(dueDate);
@@ -113,11 +146,13 @@ export async function sendReq(req, res) {
         // Generate email content with the upload URL
         const { subject, body } = generateEmail({ 
             categoryId, 
+            categoryName,
             clientName, 
             period, 
             dueDate, 
             uploadUrl, 
-            docs 
+            docs,
+            isAccountancyFirm
         });
         
         // Get recipient email
@@ -152,6 +187,26 @@ export async function sendReq(req, res) {
         // Send email
         await sgMail.send(msg);
         console.log(`Email sent to ${to}`);
+
+        // Log email activity
+        await logActivity({
+            userId,
+            type: ACTIVITY_TYPES.DOCUMENT_REQUEST_SENT,
+            category: ACTIVITY_CATEGORIES.EMAIL,
+            title: `Document request sent to "${clientName}"`,
+            description: `Sent document request email for ${categoryName} - ${period}`,
+            clientName,
+            clientEmail: to,
+            metadata: {
+                categoryId,
+                categoryName,
+                period,
+                dueDate,
+                docs,
+                isAccountancyFirm,
+                uploadUrl
+            }
+        });
 
         try{
           await supabase
